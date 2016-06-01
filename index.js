@@ -220,7 +220,7 @@ Throttle.prototype.send = function(request) {
     throttle.cycle()
   })
   dbg.req('sent (%s queued)', throttle._buffer.length)
-  request.throttled.call(request)
+  request.throttled.call(request, request.throttledCallback)
   throttle._requestTimes.push(Date.now())
   throttle._current += 1
 }
@@ -246,10 +246,10 @@ Throttle.prototype.plugin = function(serial) {
     request.throttled = request.end
     request.end = function(callback) {
       dbg.fn('patched end')
-      // the only param passed to .end is the callback, so we can just store
-      // that on the emitter, and don't need to deal any other arguments
-      // passed in
-      request.on('end', callback)
+      // the only param passed to .end is the callback, so we have to make sure it is available
+      // in _callback in case the request is times out, and that it can be passed as an argument
+      // to the real 'end' function when it is called
+      request.throttledCallback = callback
       // place this request in the queue
       request.throttle.cycle(request)
       return request
